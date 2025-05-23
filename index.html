@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequential Timer</title>
+    <style>
+        :root {
+            --color-bg: #f3f6fa;
+            --color-container: #fff;
+            --color-heading: #222;
+            --color-text: #333;
+            --color-border: #e0e0e0;
+            --color-accent: #1976d2;
+            --color-success: #4caf50;
+            --color-progress: #4caf50;
+            --color-timer-active: #e3f2fd;
+            --color-timer-completed: #e8f5e9;
+            --color-timer-completed-border: #a5d6a7;
+            --color-timer-active-border: #90caf9;
+            --color-btn-disabled: #b0bec5;
+            --color-btn-hover: #1565c0;
+            --color-notification-error: #ff4757;
+            --color-notification-success: #4caf50;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: var(--color-bg);
+            margin: 0;
+            padding: 0;
+            color: var(--color-text);
+            transition: background 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 480px;
+            margin: 40px auto 0 auto;
+            background: var(--color-container);
+            border-radius: 18px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            padding: 32px 24px 24px 24px;
+            transition: background 0.3s;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 16px;
+            color: var(--color-heading);
+        }
+        .theme-toggle {
+            position: absolute;
+            top: 18px;
+            right: 30px;
+            z-index: 10;
+        }
+        .theme-toggle-btn {
+            background: none;
+            border: none;
+            color: var(--color-accent);
+            font-size: 1.5rem;
+            cursor: pointer;
+            outline: none;
+            transition: color 0.2s;
+        }
+        .theme-toggle-btn:hover {
+            color: var(--color-success);
+        }
+        .timer-form {
+            margin-bottom: 18px;
+            padding: 14px 0;
+            border-bottom: 1px solid #e3e3e3;
+        }
+        .form-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .form-group label {
+            width: 88px;
+            font-weight: 500;
+            color: var(--color-text);
+        }
+        .form-group input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #bbb;
+            border-radius: 6px;
+            font-size: 1rem;
+            background: inherit;
+            color: inherit;
+        }
+        .time-inputs {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+        .time-inputs input[type="number"] {
+            width: 56px;
+            padding: 7px;
+            border: 1px solid #bbb;
+            border-radius: 6px;
+            font-size: 1rem;
+            text-align: right;
+            background: inherit;
+            color: inherit;
+        }
+        .time-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .quick-add-btn {
+            min-width: 70px;
+            padding: 6px 10px;
+            font-size: 0.98rem;
+            background: var(--color-accent, #1976d2);
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex: 0 0 auto;
+        }
+        .quick-add-btn:hover {
+            background: var(--color-btn-hover, #1565c0);
+        }
+        .add-btn {
+            margin-left: 12px;
+            padding: 8px 16px;
+            background: var(--color-success);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .add-btn:hover {
+            background: #388e3c;
+        }
+        .status {
+            margin: 18px 0 10px 0;
+            text-align: center;
+            font-size: 1.08rem;
+            color: var(--color-text);
+        }
+        /* Current Activity Display */
+        .current-activity {
+            margin: 22px 0 18px 0;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.4s;
+        }
+        .activity-name {
+            font-size: 2.1rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--color-accent);
+            letter-spacing: 1px;
+            word-break: break-word;
+        }
+        .activity-timer {
+            font-family: 'Consolas', monospace;
+            font-size: 3.2rem;
+            font-weight: bold;
+            color: var(--color-success);
+            background: rgba(0,0,0,0.05);
+            padding: 8px 38px;
+            border-radius: 16px;
+            min-width: 200px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        }
+        @media (max-width: 600px) {
+            .activity-name { font-size: 1.3rem; }
+            .activity-timer { font-size: 2.1rem; min-width: 120px; padding: 6px 12px;}
+            .time-inputs {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+            }
+            .time-buttons {
+                justify-content: flex-start;
+                gap: 6px;
+            }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-15px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #e0e0e0;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 18px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--color-progress);
+            width: 0%;
+            transition: width 0.4s;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .control-btn {
+            padding: 8px 18px;
+            background: var(--color-accent);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .control-btn:disabled {
+            background: var(--color-btn-disabled);
+            cursor: default;
+        }
+        .control-btn:hover:not(:disabled) {
+            background: var(--color-btn-hover);
+        }
+        .timer-list {
+            margin-top: 12px;
+        }
+        .timer-item {
+            background: #f9f9f9;
+            border: 1px solid var(--color-border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s, border 0.2s, color 0.2s;
+        }
+        .timer-item.active {
+            background: var(--color-timer-active);
+            border-color: var(--color-timer-active-border);
+        }
+        .timer-item.completed {
+            background: var(--color-timer-completed);
+            border-color: var(--color-timer-completed-border);
+            color: #888;
+        }
+        .timer-info {
+            flex: 2;
+        }
+        .timer-name {
+            font-weight: 600;
+            font-size: 1.08rem;
+        }
+        .timer-duration {
+            font-size: 0.95rem;
+            color: #666;
+        }
+        .timer-display {
+            font-family: 'Consolas', monospace;
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin: 0 16px;
+            min-width: 60px;
+            text-align: right;
+        }
+        .timer-actions {
+            display: flex;
+            gap: 4px;
+        }
+        .action-btn {
+            background: #fff;
+            border: 1px solid #bdbdbd;
+            border-radius: 5px;
+            color: #333;
+            padding: 3px 8px;
+            font-size: 0.98rem;
+            cursor: pointer;
+            transition: background 0.2s, border 0.2s, color 0.2s;
+        }
+        .action-btn:disabled {
+            color: #bbb;
+            border-color: #eee;
+            cursor: default;
+        }
+        .action-btn:hover:not(:disabled) {
+            background: #f1f1f1;
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+        }
+        .edit-form {
+            display: none;
+            margin-top: 8px;
+            background: #f1f8e9;
+            border-radius: 6px;
+            padding: 8px;
+        }
+        .edit-form.show {
+            display: block;
+        }
+        .edit-inputs {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .edit-inputs input[type="text"] {
+            flex: 1;
+            padding: 6px;
+            font-size: 1rem;
+            background: inherit;
+            color: inherit;
+        }
+        .edit-time-inputs {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .edit-time-inputs input[type="number"] {
+            width: 48px;
+            padding: 5px;
+            font-size: 1rem;
+            text-align: right;
+            background: inherit;
+            color: inherit;
+        }
+        .edit-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .notification {
+            position: fixed;
+            top: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--color-notification-success);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1.08rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s, background 0.3s;
+            z-index: 100;
+        }
+        .notification.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        @media (max-width: 600px) {
+            .container {
+                max-width: 98vw;
+                margin: 0;
+                border-radius: 0;
+                padding: 14px 4vw 18px 4vw;
+            }
+            .theme-toggle {
+                right: 10px;
+            }
+        }
+
+        /* DARK THEME */
+        body.dark {
+            --color-bg: #191c22;
+            --color-container: #23262b;
+            --color-heading: #f5f5f5;
+            --color-text: #e0e0e0;
+            --color-border: #363b44;
+            --color-accent: #90caf9;
+            --color-success: #81c784;
+            --color-progress: #81c784;
+            --color-timer-active: #232c3a;
+            --color-timer-completed: #1c2a1e;
+            --color-timer-completed-border: #388e3c;
+            --color-timer-active-border: #1976d2;
+            --color-btn-disabled: #424242;
+            --color-btn-hover: #1565c0;
+            --color-notification-error: #e57373;
+            --color-notification-success: #388e3c;
+        }
+        body.dark .timer-item {
+            background: #23262b;
+            color: #e0e0e0;
+        }
+        body.dark .timer-item.completed {
+            color: #b0bec5;
+        }
+        body.dark .action-btn {
+            background: #23262b;
+            color: #e0e0e0;
+            border-color: #363b44;
+        }
+        body.dark .action-btn:hover:not(:disabled) {
+            background: #363b44;
+            color: #90caf9;
+            border-color: #90caf9;
+        }
+        body.dark .edit-form {
+            background: #263238;
+        }
+        body.dark .progress-bar {
+            background: #363b44;
+        }
+        body.dark .notification {
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle">
+        <button class="theme-toggle-btn" id="themeToggleBtn" title="Switch theme">🌙</button>
+    </div>
+    <div class="container">
+        <h1>⏰ Sequential Timer</h1>
+        
+        <div class="timer-form">
+            <div class="form-group">
+                <label for="timerName">Timer Name:</label>
+                <input type="text" id="timerName" placeholder="e.g., Workout, Break, Study">
+            </div>
+            <div class="form-group">
+                <label>Set Time:</label>
+                <div class="time-inputs">
+                    <input type="number" id="minutes" placeholder="min" min="0" max="59" value="5">
+                    <span>min</span>
+                    <input type="number" id="seconds" placeholder="sec" min="0" max="59" value="0">
+                    <span>sec</span>
+                    <div class="time-buttons">
+                        <button type="button" class="quick-add-btn" onclick="addOneMinute()">+1 min</button>
+                        <button type="button" class="quick-add-btn" onclick="addTenSeconds()">+10 sec</button>
+                        <button type="button" class="quick-add-btn" onclick="subtractTenSeconds()">-10 sec</button>
+                    </div>
+                </div>
+                <button class="add-btn" onclick="addTimer()">Add</button>
+            </div>
+        </div>
+
+        <div class="status" id="status">Add timers and press Play to start</div>
+        <div id="currentActivity" class="current-activity" style="display:none;">
+            <div class="activity-name" id="activityName"></div>
+            <div class="activity-timer" id="activityTimer"></div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" id="playBtn" onclick="startTimers()">▶ Play</button>
+            <button class="control-btn" id="pauseBtn" onclick="pauseTimers()" disabled>⏸ Pause</button>
+            <button class="control-btn" id="stopBtn" onclick="stopTimers()" disabled>⏹ Stop</button>
+            <button class="control-btn" onclick="clearAllTimers()">🗑 Clear All</button>
+        </div>
+
+        <div class="timer-list" id="timerList"></div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        let timers = [];
+        let currentTimerIndex = 0;
+        let isRunning = false;
+        let isPaused = false;
+        let intervalId = null;
+        let currentSeconds = 0;
+        let totalSeconds = 0;
+
+        // Quick add/subtract buttons logic
+        function addOneMinute() {
+            let minInput = document.getElementById('minutes');
+            let min = parseInt(minInput.value) || 0;
+            min = Math.min(min + 1, 59);
+            minInput.value = min;
+        }
+        function addTenSeconds() {
+            let secInput = document.getElementById('seconds');
+            let minInput = document.getElementById('minutes');
+            let sec = parseInt(secInput.value) || 0;
+            let min = parseInt(minInput.value) || 0;
+            sec += 10;
+            if (sec > 59) {
+                min += Math.floor(sec / 60);
+                sec = sec % 60;
+            }
+            if (min > 59) min = 59;
+            minInput.value = min;
+            secInput.value = sec;
+        }
+        function subtractTenSeconds() {
+            let secInput = document.getElementById('seconds');
+            let minInput = document.getElementById('minutes');
+            let sec = parseInt(secInput.value) || 0;
+            let min = parseInt(minInput.value) || 0;
+            let total = min * 60 + sec;
+            total = Math.max(0, total - 10);
+            min = Math.floor(total / 60);
+            sec = total % 60;
+            minInput.value = min;
+            secInput.value = sec;
+        }
+
+        // THEME HANDLING
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.body.classList.add('dark');
+                document.getElementById('themeToggleBtn').textContent = '☀️';
+                document.getElementById('themeToggleBtn').title = 'Switch to light theme';
+            } else {
+                document.body.classList.remove('dark');
+                document.getElementById('themeToggleBtn').textContent = '🌙';
+                document.getElementById('themeToggleBtn').title = 'Switch to dark theme';
+            }
+        }
+        function toggleTheme() {
+            let theme = localStorage.getItem('theme') === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('theme', theme);
+            setTheme(theme);
+        }
+        // On load, set the theme
+        (function() {
+            let theme = localStorage.getItem('theme');
+            if (!theme) {
+                // Try to detect system preference
+                theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            setTheme(theme);
+        })();
+        document.getElementById('themeToggleBtn').onclick = toggleTheme;
+
+        // TIMER LOGIC
+        function addTimer() {
+            const name = document.getElementById('timerName').value.trim();
+            const minutes = parseInt(document.getElementById('minutes').value) || 0;
+            const seconds = parseInt(document.getElementById('seconds').value) || 0;
+
+            if (!name) {
+                showNotification('Please enter a timer name!', 'error');
+                return;
+            }
+
+            if (minutes === 0 && seconds === 0) {
+                showNotification('Please set the time!', 'error');
+                return;
+            }
+
+            const timer = {
+                id: Date.now(),
+                name: name,
+                minutes: minutes,
+                seconds: seconds,
+                totalSeconds: minutes * 60 + seconds,
+                completed: false
+            };
+
+            timers.push(timer);
+
+            // Save last entered values to localStorage
+            localStorage.setItem('lastMinutes', minutes);
+            localStorage.setItem('lastSeconds', seconds);
+
+            // Reset input fields, but keep last entered values
+            document.getElementById('timerName').value = '';
+            document.getElementById('minutes').value = minutes;
+            document.getElementById('seconds').value = seconds;
+
+            saveTimersToStorage();
+            renderTimers();
+            updateStatus();
+            showNotification(`Timer "${name}" added!`);
+        }
+
+        function editTimer(id) {
+            if (isRunning) {
+                showNotification('Cannot edit while timer is running!', 'error');
+                return;
+            }
+            
+            const editForm = document.getElementById(`edit-${id}`);
+            editForm.classList.add('show');
+        }
+
+        function saveTimer(id) {
+            const nameInput = document.getElementById(`editName-${id}`);
+            const minutesInput = document.getElementById(`editMinutes-${id}`);
+            const secondsInput = document.getElementById(`editSeconds-${id}`);
+            
+            const newName = nameInput.value.trim();
+            const newMinutes = parseInt(minutesInput.value) || 0;
+            const newSeconds = parseInt(secondsInput.value) || 0;
+
+            if (!newName) {
+                showNotification('Please enter a timer name!', 'error');
+                return;
+            }
+
+            if (newMinutes === 0 && newSeconds === 0) {
+                showNotification('Please set the time!', 'error');
+                return;
+            }
+
+            const timerIndex = timers.findIndex(timer => timer.id === id);
+            if (timerIndex !== -1) {
+                timers[timerIndex] = {
+                    ...timers[timerIndex],
+                    name: newName,
+                    minutes: newMinutes,
+                    seconds: newSeconds,
+                    totalSeconds: newMinutes * 60 + newSeconds
+                };
+                
+                saveTimersToStorage();
+                renderTimers();
+                showNotification('Timer updated!');
+            }
+        }
+
+        function cancelEdit(id) {
+            const editForm = document.getElementById(`edit-${id}`);
+            editForm.classList.remove('show');
+            
+            // Restore original values
+            const timer = timers.find(t => t.id === id);
+            if (timer) {
+                document.getElementById(`editName-${id}`).value = timer.name;
+                document.getElementById(`editMinutes-${id}`).value = timer.minutes;
+                document.getElementById(`editSeconds-${id}`).value = timer.seconds;
+            }
+        }
+
+        function moveTimer(currentIndex, direction) {
+            if (isRunning) {
+                showNotification('Cannot change order while timer is running!', 'error');
+                return;
+            }
+
+            const newIndex = currentIndex + direction;
+            
+            if (newIndex < 0 || newIndex >= timers.length) {
+                return;
+            }
+
+            // Swap timers
+            [timers[currentIndex], timers[newIndex]] = [timers[newIndex], timers[currentIndex]];
+            
+            saveTimersToStorage();
+            renderTimers();
+            showNotification('Timer order changed!');
+        }
+
+        function deleteTimer(id) {
+            if (isRunning) {
+                showNotification('Cannot delete while timer is running!', 'error');
+                return;
+            }
+            
+            timers = timers.filter(timer => timer.id !== id);
+            saveTimersToStorage();
+            renderTimers();
+            updateStatus();
+            showNotification('Timer deleted!');
+        }
+
+        function clearAllTimers() {
+            if (isRunning) {
+                showNotification('Cannot clear all while timer is running!', 'error');
+                return;
+            }
+            
+            timers = [];
+            saveTimersToStorage();
+            renderTimers();
+            updateStatus();
+            showNotification('All timers cleared!');
+        }
+
+        function scrollToActiveTimer() {
+            const activeTimer = document.getElementById(`timer-${currentTimerIndex}`);
+            if (activeTimer) {
+                activeTimer.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                    inline: 'nearest'
+                });
+            }
+        }
+
+        function createChimeSound(frequencies, duration = 0.3) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const gainNode = audioContext.createGain();
+                gainNode.connect(audioContext.destination);
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+
+                frequencies.forEach((freq, index) => {
+                    const oscillator = audioContext.createOscillator();
+                    oscillator.connect(gainNode);
+                    oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+                    oscillator.type = 'sine';
+                    
+                    const startTime = audioContext.currentTime + (index * 0.1);
+                    oscillator.start(startTime);
+                    oscillator.stop(startTime + duration);
+                });
+            } catch (error) {
+                console.log('Cannot play audio:', error);
+            }
+        }
+        function playChimeSound() {
+            createChimeSound([523.25, 659.25], 0.4); // C5, E5
+        }
+
+        function playCompletionChime() {
+            setTimeout(() => createChimeSound([523.25], 0.3), 0);    // C5
+            setTimeout(() => createChimeSound([659.25], 0.3), 150);  // E5
+            setTimeout(() => createChimeSound([783.99], 0.3), 300);  // G5
+            setTimeout(() => createChimeSound([1046.50], 0.5), 450); // C6
+        }
+        // Save timers to localStorage
+        function saveTimersToStorage() {
+            try {
+                const timersData = JSON.stringify(timers);
+                localStorage.setItem('timers', timersData);
+            } catch (error) {
+                console.warn('Error saving timers:', error);
+            }
+        }
+
+        // Load timers from localStorage
+        function loadTimersFromStorage() {
+            try {
+                const saved = localStorage.getItem('timers');
+                if (saved) {
+                    const loadedTimers = JSON.parse(saved);
+                    if (Array.isArray(loadedTimers)) {
+                        timers = loadedTimers;
+                        showNotification('Loaded saved timers!');
+                    }
+                }
+            } catch (error) {
+                console.warn('Error loading timers:', error);
+                timers = [];
+            }
+        }
+
+        // Load last entered time input values
+        function loadLastTimeInputs() {
+            const lastMinutes = localStorage.getItem('lastMinutes');
+            const lastSeconds = localStorage.getItem('lastSeconds');
+            document.getElementById('minutes').value = lastMinutes !== null ? lastMinutes : 5;
+            document.getElementById('seconds').value = lastSeconds !== null ? lastSeconds : 0;
+        }
+
+        function renderTimers() {
+            const timerList = document.getElementById('timerList');
+            timerList.innerHTML = '';
+
+            timers.forEach((timer, index) => {
+                const timerDiv = document.createElement('div');
+                const isActive = index === currentTimerIndex && isRunning;
+                timerDiv.className = `timer-item ${isActive ? 'active' : ''} ${timer.completed ? 'completed' : ''}`;
+                timerDiv.id = `timer-${index}`;
+                
+                const displayTime = isActive
+                    ? formatTime(currentSeconds)
+                    : formatTime(timer.totalSeconds);
+
+                timerDiv.innerHTML = `
+                    <div class="timer-info">
+                        <div class="timer-name">${timer.name}</div>
+                        <div class="timer-duration">Set Time: ${timer.minutes} min ${timer.seconds} sec</div>
+                    </div>
+                    <div class="timer-display">${displayTime}</div>
+                    <div class="timer-actions">
+                        <button class="action-btn move-btn" onclick="moveTimer(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button class="action-btn move-btn" onclick="moveTimer(${index}, 1)" ${index === timers.length - 1 ? 'disabled' : ''}>↓</button>
+                        <button class="action-btn edit-btn" onclick="editTimer(${timer.id})">Edit</button>
+                        <button class="action-btn delete-btn" onclick="deleteTimer(${timer.id})">Delete</button>
+                    </div>
+                    <div class="edit-form" id="edit-${timer.id}">
+                        <div class="edit-inputs">
+                            <input type="text" id="editName-${timer.id}" value="${timer.name}" placeholder="Timer Name">
+                            <div class="edit-time-inputs">
+                                <input type="number" id="editMinutes-${timer.id}" value="${timer.minutes}" min="0" max="59">
+                                <span>min</span>
+                                <input type="number" id="editSeconds-${timer.id}" value="${timer.seconds}" min="0" max="59">
+                                <span>sec</span>
+                            </div>
+                        </div>
+                        <div class="edit-actions">
+                            <button class="action-btn save-btn" onclick="saveTimer(${timer.id})">Save</button>
+                            <button class="action-btn cancel-btn" onclick="cancelEdit(${timer.id})">Cancel</button>
+                        </div>
+                    </div>
+                `;
+
+                timerList.appendChild(timerDiv);
+            });
+            updateCurrentActivityDisplay();
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateCurrentActivityDisplay() {
+            const activityDiv = document.getElementById('currentActivity');
+            const nameDiv = document.getElementById('activityName');
+            const timerDiv = document.getElementById('activityTimer');
+            if (isRunning && currentTimerIndex < timers.length) {
+                activityDiv.style.display = '';
+                nameDiv.textContent = timers[currentTimerIndex].name;
+                timerDiv.textContent = formatTime(currentSeconds);
+            } else {
+                activityDiv.style.display = 'none';
+            }
+        }
+
+        function startTimers() {
+            if (timers.length === 0) {
+                showNotification('Please add a timer first!', 'error');
+                return;
+            }
+
+            if (!isRunning) {
+                currentTimerIndex = 0;
+                currentSeconds = timers[0].totalSeconds;
+                totalSeconds = timers.reduce((sum, timer) => sum + timer.totalSeconds, 0);
+                timers.forEach(timer => timer.completed = false);
+            }
+
+            isRunning = true;
+            isPaused = false;
+            
+            document.getElementById('playBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = false;
+
+            intervalId = setInterval(updateTimer, 1000);
+            updateStatus();
+            renderTimers();
+            scrollToActiveTimer();
+            updateCurrentActivityDisplay();
+        }
+
+        function pauseTimers() {
+            isPaused = true;
+            isRunning = false;
+            clearInterval(intervalId);
+            
+            document.getElementById('playBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            updateStatus();
+            updateCurrentActivityDisplay();
+        }
+
+        function stopTimers() {
+            isRunning = false;
+            isPaused = false;
+            clearInterval(intervalId);
+            currentTimerIndex = 0;
+            currentSeconds = 0;
+            
+            document.getElementById('playBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = true;
+            
+            timers.forEach(timer => timer.completed = false);
+            updateStatus();
+            updateProgress();
+            renderTimers();
+            updateCurrentActivityDisplay();
+        }
+
+        function updateTimer() {
+            if (currentSeconds > 0) {
+                currentSeconds--;
+                renderTimers();
+                updateProgress();
+                updateCurrentActivityDisplay();
+            } else {
+                timers[currentTimerIndex].completed = true;
+                playChimeSound();
+                showNotification(`"${timers[currentTimerIndex].name}" completed!`);
+                
+                currentTimerIndex++;
+                
+                if (currentTimerIndex < timers.length) {
+                    currentSeconds = timers[currentTimerIndex].totalSeconds;
+                    renderTimers();
+                    updateStatus();
+                    scrollToActiveTimer();
+                    updateCurrentActivityDisplay();
+                } else {
+                    clearInterval(intervalId);
+                    isRunning = false;
+                    
+                    document.getElementById('playBtn').disabled = false;
+                    document.getElementById('pauseBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = true;
+                    
+                    playCompletionChime();
+                    showNotification('🎉 All timers completed!');
+                    updateStatus();
+                    updateProgress();
+                    updateCurrentActivityDisplay();
+                }
+            }
+        }
+
+        function updateStatus() {
+            const statusEl = document.getElementById('status');
+            
+            if (!isRunning && !isPaused && timers.length === 0) {
+                statusEl.textContent = 'Add timers and press Play to start';
+            } else if (!isRunning && !isPaused && timers.length > 0) {
+                statusEl.textContent = `${timers.length} timer(s) ready`;
+            } else if (isPaused) {
+                statusEl.textContent = '⏸ Paused';
+            } else if (isRunning && currentTimerIndex < timers.length) {
+                statusEl.textContent = `▶ Running: ${timers[currentTimerIndex].name} (${currentTimerIndex + 1}/${timers.length})`;
+            } else {
+                statusEl.textContent = '🎉 All timers completed!';
+            }
+        }
+
+        function updateProgress() {
+            if (timers.length === 0) {
+                document.getElementById('progressFill').style.width = '0%';
+                return;
+            }
+
+            const completedSeconds = timers.slice(0, currentTimerIndex).reduce((sum, timer) => sum + timer.totalSeconds, 0);
+            const currentTimerProgress = isRunning ? timers[currentTimerIndex].totalSeconds - currentSeconds : 0;
+            const progress = ((completedSeconds + currentTimerProgress) / totalSeconds) * 100;
+            
+            document.getElementById('progressFill').style.width = `${Math.min(progress, 100)}%`;
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.background = type === 'error' ? getComputedStyle(document.body).getPropertyValue('--color-notification-error') : getComputedStyle(document.body).getPropertyValue('--color-notification-success');
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        window.addEventListener('load', () => {
+            loadTimersFromStorage();
+            renderTimers();
+            updateStatus();
+            updateProgress();
+            loadLastTimeInputs();
+            updateCurrentActivityDisplay();
+        });
+
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && document.activeElement.closest('.timer-form')) {
+                addTimer();
+            }
+        });
+
+        updateStatus();
+        updateProgress();
+    </script>
+</body>
+</html>
